@@ -32,6 +32,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
     size_t ef_{ 0 };
 
     double mult_{0.0}, revSize_{0.0};
+    double alpha{1.2};
     int maxlevel_{0};
 
     std::unique_ptr<VisitedListPool> visited_list_pool_{nullptr};
@@ -442,7 +443,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
 
     void getNeighborsByHeuristic2(
         std::priority_queue<std::pair<dist_t, tableint>, std::vector<std::pair<dist_t, tableint>>, CompareByFirst> &top_candidates,
-        const size_t M) {
+        const size_t M, const double alpha) {
         if (top_candidates.size() < M) {
             return;
         }
@@ -467,7 +468,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                         fstdistfunc_(getDataByInternalId(second_pair.second),
                                         getDataByInternalId(curent_pair.second),
                                         dist_func_param_);
-                if (curdist < dist_to_query) {
+                if (alpha*curdist < dist_to_query) {
                     good = false;
                     break;
                 }
@@ -510,7 +511,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
         int level,
         bool isUpdate) {
         size_t Mcurmax = level ? maxM_ : maxM0_;
-        getNeighborsByHeuristic2(top_candidates, M_);
+        getNeighborsByHeuristic2(top_candidates, M_, alpha);
         if (top_candidates.size() > M_)
             throw std::runtime_error("Should be not be more than M_ candidates returned by the heuristic");
 
@@ -600,7 +601,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                                                 dist_func_param_), data[j]);
                     }
 
-                    getNeighborsByHeuristic2(candidates, Mcurmax);
+                    getNeighborsByHeuristic2(candidates, Mcurmax, alpha);
 
                     int indx = 0;
                     while (candidates.size() > 0) {
@@ -1050,7 +1051,7 @@ class HierarchicalNSW : public AlgorithmInterface<dist_t> {
                 }
 
                 // Retrieve neighbours using heuristic and set connections.
-                getNeighborsByHeuristic2(candidates, layer == 0 ? maxM0_ : maxM_);
+                getNeighborsByHeuristic2(candidates, layer == 0 ? maxM0_ : maxM_, alpha);
 
                 {
                     std::unique_lock <std::mutex> lock(link_list_locks_[neigh]);

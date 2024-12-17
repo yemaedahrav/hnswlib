@@ -1,3 +1,4 @@
+#include <fstream>
 #pragma once
 
 // https://github.com/nmslib/hnswlib/pull/508
@@ -219,6 +220,43 @@ AlgorithmInterface<dist_t>::searchKnnCloserFirst(const void* query_data, size_t 
 
     return result;
 }
+
+template<typename T>
+T* readDataFromFile(const std::string &filename, int &num_points, int &dimension) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Cannot open file: " + filename);
+    }
+
+    file.read(reinterpret_cast<char*>(&num_points), sizeof(int));
+    file.read(reinterpret_cast<char*>(&dimension), sizeof(int));
+
+    T* data = new T[dimension*num_points];
+    file.read(reinterpret_cast<char*>(data), dimension * num_points * sizeof(T));
+
+    file.close();
+    return data;
+}
+
+template<typename T>
+T* readGroundTruthFile(const std::string &filename, int &num_queries, int &num_elements_per_query) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Cannot open file: " + filename);
+    }
+
+    file.read(reinterpret_cast<char*>(&num_queries), sizeof(int));
+    file.read(reinterpret_cast<char*>(&num_elements_per_query), sizeof(int));
+
+    T* data = new T[num_queries * num_elements_per_query * 2]; // Allocate memory for ids and distances
+
+    file.read(reinterpret_cast<char*>(data), num_queries * num_elements_per_query * sizeof(int));
+    file.read(reinterpret_cast<char*>(data + num_queries * num_elements_per_query), num_queries * num_elements_per_query * sizeof(float));
+
+    file.close();
+    return data;
+}
+
 }  // namespace hnswlib
 
 #include "space_l2.h"
